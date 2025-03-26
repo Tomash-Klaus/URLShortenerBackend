@@ -20,11 +20,10 @@ namespace URLShortenerBackend.Controllers
         }
 
         [AllowAnonymous]
-        [HttpPost(Name = "Login")]
+        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDTO loginDTO)
         {
-            await _authService.LoginAsync(loginDTO);
-            return Ok();
+            return Ok(await _authService.LoginAsync(loginDTO));
         }
 
 

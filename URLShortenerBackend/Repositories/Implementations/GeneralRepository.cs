@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using URLShortenerBackend.Data;
+using URLShortenerBackend.DTOs;
 
 namespace URLShortenerBackend.Repositories.Implementations
 {
@@ -33,7 +34,7 @@ namespace URLShortenerBackend.Repositories.Implementations
             return await Entity.ToListAsync();
         }
 
-        public async Task<T?> GetByIdAsync(int id)
+        public async Task<T?> GetByIdAsync(Guid id)
         {
             return await _context.FindAsync<T>(id);
         }
@@ -47,6 +48,25 @@ namespace URLShortenerBackend.Repositories.Implementations
         {
             _context.Update(entity);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<PagedResult<T>> GetPagedDataAsync(QueryParams queryParams, Expression<Func<T, bool>> filter = null)
+        {
+            var query = Entity.AsQueryable();
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .Skip((queryParams.PageNumber - 1) * queryParams.PageSize)
+                .Take(queryParams.PageSize)
+                .ToListAsync();
+
+            return new PagedResult<T> { Items = items, PageNumber = queryParams.PageNumber, PageSize = queryParams.PageSize, TotalCount=totalCount };
         }
     }
 }

@@ -7,25 +7,34 @@ using URLShortenerBackend.Services.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
+using URLShortenerBackend.Filters;
+using URLShortenerBackend.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<DbContextEF>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-// Add services to the container
 builder.Services.AddCors((options) =>
 {
     options.AddPolicy(name: "CORS",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
+            policy.WithOrigins("http://localhost:5174") //  for HTTP 
                     .AllowCredentials()
                     .AllowAnyHeader()
                     .AllowAnyMethod();
         });
 });
+// Add Identity Services
+builder.Services.AddIdentity<IdentityUser, IdentityRole>()
+    .AddEntityFrameworkStores<DbContextEF>()
+    .AddDefaultTokenProviders();
 
+builder.Services.AddSingleton(typeof(IUrlShortenerService), typeof(UrlShortenerService));
 builder.Services.AddScoped(typeof(IGeneralRepository<>), typeof(GeneralRepository<>));
+builder.Services.AddScoped(typeof(IUrlRepository), typeof(UrlRepository));
 builder.Services.AddScoped(typeof(IAuthService), typeof(AuthService));
-
+builder.Services.AddScoped(typeof(IUrlService), typeof(UrlService));
+builder.Services.AddScoped<DeleteBasedOnRoleOrOwnRecordFilterAttribute>();
 
 // Adding Authentication
 builder.Services.AddAuthentication(options =>
@@ -34,7 +43,6 @@ builder.Services.AddAuthentication(options =>
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-
 // Adding Jwt Bearer
 .AddJwtBearer(options =>
 {
@@ -50,7 +58,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-
+builder.Services.AddAuthorization();
+builder.Services.Configure<RouteOptions>(opt => opt.LowercaseUrls = true);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -71,8 +80,10 @@ else
 }
 
 app.UseCors("CORS");
+app.UseMiddleware<ExceptionHandlerMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<TokenValidationMiddleware>();
 app.MapControllers();
 
 
@@ -81,6 +92,5 @@ using (var scope = app.Services.CreateScope())
     var serviceProvider = scope.ServiceProvider;
     await DatabaseSeed.SeedAsync(serviceProvider);
 }
-
 
 app.Run();

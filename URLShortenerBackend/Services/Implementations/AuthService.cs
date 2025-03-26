@@ -13,7 +13,7 @@ namespace URLShortenerBackend.Services.Implementations
         private readonly UserManager<IdentityUser> _userManager;
         private readonly IConfiguration _configuration;
 
-        public AuthService(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration)
+        public AuthService(UserManager<IdentityUser> userManager, IConfiguration configuration)
         {
             _configuration = configuration;
             _userManager = userManager;
@@ -26,8 +26,9 @@ namespace URLShortenerBackend.Services.Implementations
             if (!userPassed) throw new BadHttpRequestException("User pass is incorrect", StatusCodes.Status403Forbidden);
 
             var userRoles = await _userManager.GetRolesAsync(findedUser);
+            var claims = userRoles.Select(role => new Claim(ClaimTypes.Role, role)).Append(new Claim(ClaimTypes.NameIdentifier, findedUser.Id));
 
-            return GenerateToken(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+            return GenerateToken(claims);
         }
 
         private string GenerateToken(IEnumerable<Claim> authClaims)

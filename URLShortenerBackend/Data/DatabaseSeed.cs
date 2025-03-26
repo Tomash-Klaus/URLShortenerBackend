@@ -68,7 +68,7 @@ namespace URLShortenerBackend.Data
             {
                 if (await userManager.FindByEmailAsync(user.Item1.Email!) == null)
                 {
-                    var result = await userManager.CreateAsync(user.Item1, "Password99");
+                    var result = await userManager.CreateAsync(user.Item1, "Password99@");
                     if (result.Succeeded)
                     {
                         await userManager.AddToRoleAsync(user.Item1, user.Item2);
